@@ -1,0 +1,2 @@
+# PowerShell-Backup-MSSQL-Databases
+This PowerShell script uses the sqlcmd utility to create .bak files of the specified Microsoft SQL databases periodically. It will create three separate folders for daily, monthly and yearly backups. Daily backups will be kept for 30 days, monthly backups will be kept for 1 year and yearly backups will be kept for 10 years. It will also write a log to the respective folders for each backup.
