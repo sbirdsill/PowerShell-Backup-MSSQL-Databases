@@ -44,20 +44,23 @@ if (-not (Test-Path "$TopLevelBackupPath\Readme.txt"))
   New-Item -Path $TopLevelBackupPath -Name "Readme.txt" -ItemType "file" -Value "SQL backups will be kept in this folder. They are performed with Backup-MSSQL-Databases.ps1"
 }
 
-
 # Function to start the backup and cleanup process. 
 function Start-Backup {
 
-  # Set $n to 0 for the log
+  # For the log: set n to 0 and get the runas user
   $n = 0
+  $Username = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
   # Start the log
   Start-Transcript -Path $BackupPath\MSSQL_Backup_Log_$timestamp.log -Append
+
+  Write-Host "Backup-MSSQL-Databases.ps1, logged on to SQL Server [$sqlserver] as [$Username]."
 
   # Create backup folder.
   $n++
   Write-Host "[$n] Creating backup folder..."
   New-Item -Path "$BackupPath" -Name "$timestamp" -ItemType "directory" -Verbose
+  Write-Host ""
 
   foreach ($Database in $Databases) {
 
@@ -65,23 +68,26 @@ function Start-Backup {
     $n++
     Write-Host "[$n] Backing up $Database..."
     SQLCMD.EXE -E -S $sqlserver -Q "BACKUP DATABASE $Database TO DISK='$BackupPath\$timestamp\$Database`_$timestamp.bak' WITH FORMAT"
+    Write-Host ""
 
     # Verify backed up SQL databases.
     $n++
     Write-Host "[$n] Verifying $Database backup..."
     SQLCMD.EXE -E -S $sqlserver -Q "RESTORE VERIFYONLY FROM DISK = '$BackupPath\$timestamp\$Database`_$timestamp.bak'"
+    Write-Host ""
   }
 
   # Delete files/folders older than specified time.
   $n++
   Write-Host "[$n] Removing old files/folders..."
   Get-ChildItem -Path $BackupPath -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force -Verbose
+  Write-Host ""
 
   # Delete empty directories.
-  Get-ChildItem -Path $BackupPath -Recurse -Force | Where-Object { $_.PSIsContainer -and (Get-ChildItem -Path $_.FullName -Recurse -Force | Where-Object { !$_.PSIsContainer }) -eq $null } | Remove-Item -Force -Recurse -Verbose
-  
   $n++
+  Get-ChildItem -Path $BackupPath -Recurse -Force | Where-Object { $_.PSIsContainer -and (Get-ChildItem -Path $_.FullName -Recurse -Force | Where-Object { !$_.PSIsContainer }) -eq $null } | Remove-Item -Force -Recurse -Verbose
   Write-Host "[$n] Backup complete."
+  Write-Host ""
 }
 
 # Perform daily backup and delete files/folders older than 30 days (1 month).
