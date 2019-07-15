@@ -1,6 +1,6 @@
 # Backup-MSSQL-Databases.ps1
-# Version 1.3
-# Last updated Jul-14-2019
+# Version 1.4
+# Last updated Jul-15-2019
 #
 # This PowerShell script will perform a full backup of all defined MSSQL databases to a BAK file.
 # Use Task Scheduler to have this script run daily. The account you run this under will require the proper permission to perform backups in SQL server.
@@ -48,31 +48,40 @@ if (-not (Test-Path "$TopLevelBackupPath\Readme.txt"))
 # Function to start the backup and cleanup process. 
 function Start-Backup {
 
+  # Set $n to 0 for the log
+  $n = 0
+
   # Start the log
   Start-Transcript -Path $BackupPath\MSSQL_Backup_Log_$timestamp.log -Append
 
   # Create backup folder.
-  Write-Host "[1] Creating backup folder..."
+  $n++
+  Write-Host "[$n] Creating backup folder..."
   New-Item -Path "$BackupPath" -Name "$timestamp" -ItemType "directory" -Verbose
 
   foreach ($Database in $Databases) {
 
     # Start backing up SQL databases.
-    Write-Host "[2] Backing up $Database..."
+    $n++
+    Write-Host "[$n] Backing up $Database..."
     SQLCMD.EXE -E -S $sqlserver -Q "BACKUP DATABASE $Database TO DISK='$BackupPath\$timestamp\$Database`_$timestamp.bak' WITH FORMAT"
 
     # Verify backed up SQL databases.
-    Write-Host "[3] Verifying $Database backup..."
+    $n++
+    Write-Host "[$n] Verifying $Database backup..."
     SQLCMD.EXE -E -S $sqlserver -Q "RESTORE VERIFYONLY FROM DISK = '$BackupPath\$timestamp\$Database`_$timestamp.bak'"
   }
 
   # Delete files/folders older than specified time.
-  Write-Host "[4] Removing old files/folders..."
+  $n++
+  Write-Host "[$n] Removing old files/folders..."
   Get-ChildItem -Path $BackupPath -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force -Verbose
 
   # Delete empty directories.
   Get-ChildItem -Path $BackupPath -Recurse -Force | Where-Object { $_.PSIsContainer -and (Get-ChildItem -Path $_.FullName -Recurse -Force | Where-Object { !$_.PSIsContainer }) -eq $null } | Remove-Item -Force -Recurse -Verbose
-  Write-Host "[5] Backup complete."
+  
+  $n++
+  Write-Host "[$n] Backup complete."
 }
 
 # Perform daily backup and delete files/folders older than 30 days (1 month).
