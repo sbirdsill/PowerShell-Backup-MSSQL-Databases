@@ -27,7 +27,6 @@ $timestamp = Get-Date -Format yyyy-MM-dd
 $Date = Get-Date
 
 # Create backup folders and Readme file if they don't already exist
-
 if (-not (Test-Path "$TopLevelBackupPath\Daily"))
 {
   New-Item -Path $TopLevelBackupPath -Name "Daily" -ItemType "directory"
